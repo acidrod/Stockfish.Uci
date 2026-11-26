@@ -1,0 +1,38 @@
+name: Work item
+description: Propose a focused task, improvement, bug fix, or documentation change.
+title: "[Work]: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Keep this short and concrete. One issue should describe one outcome that can be reviewed and verified.
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: What should be true when this work is complete?
+      placeholder: Describe the desired outcome in one or two sentences.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+      description: List the observable conditions that prove this work is complete.
+      placeholder: |
+        - [ ] Criterion 1
+        - [ ] Criterion 2
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context (optional)
+      description: Add links, constraints, examples, or relevant technical details.
+      placeholder: Links, screenshots, related issues, or constraints.
+    validations:
+      required: false
