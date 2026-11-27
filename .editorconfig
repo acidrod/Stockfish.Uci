@@ -21,3 +21,7 @@ dotnet_style_qualification_for_method = false:suggestion
 dotnet_style_qualification_for_event = false:suggestion
 csharp_style_namespace_declarations = file_scoped:suggestion
 csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+
+# Unit test names may use underscores to separate scenarios.
+[tests/**/*.cs]
+dotnet_diagnostic.CA1707.severity = none
