@@ -51,6 +51,7 @@ jobs:
           --job-status "${{ job.status }}"
 
   managed:
+    needs: unit_tests
     name: Managed (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
