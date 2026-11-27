@@ -66,3 +66,72 @@ class ReleaseToolsTests(TestCase):
                     stream.write(b"tampered")
                 with self.assertRaises(ValueError):
                     TOOLS.verify_package(directory, "0.1.0", self.COMMIT, self.REPOSITORY, False)
+
+
+PACKAGE_SPEC = importlib.util.spec_from_file_location(
+    "package_verifier", Path(__file__).resolve().parents[2] / "scripts" / "verify-package.py"
+)
+PACKAGE_VERIFIER = importlib.util.module_from_spec(PACKAGE_SPEC)
+PACKAGE_SPEC.loader.exec_module(PACKAGE_VERIFIER)
+
+
+class PackageIconTests(TestCase):
+    ICON = "stockfish-uci-icon.png"
+    NUSPEC = "Stockfish.Uci.nuspec"
+    ICON_BYTES = (Path(__file__).resolve().parents[2] / "assets" / ICON).read_bytes()
+
+    def verify_fixture(self, overrides=None, missing=()):
+        entries = {
+            "README.md": "Stockfish.Uci",
+            "lib/net10.0/Stockfish.Uci.dll": b"managed assembly fixture",
+            self.ICON: self.ICON_BYTES,
+            self.NUSPEC: (
+                '<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">'
+                f"<metadata><icon>{self.ICON}</icon></metadata></package>"
+            ),
+        }
+        entries.update(overrides or {})
+        for name in missing:
+            del entries[name]
+        with tempfile.TemporaryDirectory() as temp:
+            package = Path(temp) / "Stockfish.Uci.0.1.0.nupkg"
+            with ZipFile(package, "w") as archive:
+                for name, content in entries.items():
+                    archive.writestr(name, content)
+            PACKAGE_VERIFIER.verify_package(package)
+
+    def test_accepts_only_the_expected_package_icon(self):
+        self.verify_fixture()
+
+    def test_requires_the_icon_and_nuspec(self):
+        for name in (self.ICON, self.NUSPEC):
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, "Missing required"):
+                self.verify_fixture(missing=(name,))
+
+    def test_rejects_unexpected_png_and_engine_assets(self):
+        for name in ("another-icon.png", "assets/" + self.ICON, "Stockfish", "stockfish.exe",
+                     "lib/net10.0/other.dll", "runtimes/linux-x64/native/stockfish"):
+            with self.subTest(name=name), self.assertRaisesRegex(
+                ValueError, "Unexpected package entry|External binary or archive|Runtime asset"
+            ):
+                self.verify_fixture(overrides={name: b"unexpected content"})
+
+    def test_rejects_empty_invalid_oversized_and_wrong_dimension_icons(self):
+        wrong_width = self.ICON_BYTES[:16] + (127).to_bytes(4, "big") + self.ICON_BYTES[20:]
+        for content in (b"", b"not a PNG", self.ICON_BYTES[:33],
+                        wrong_width, self.ICON_BYTES + b"x" * 1_000_000):
+            with self.subTest(size=len(content)), self.assertRaisesRegex(
+                ValueError, "empty|PNG|128|size"
+            ):
+                self.verify_fixture(overrides={self.ICON: content})
+
+    def test_requires_exact_icon_metadata(self):
+        for metadata in (
+            "<metadata />",
+            "<metadata><icon>other.png</icon></metadata>",
+            "<metadata><icon>assets/stockfish-uci-icon.png</icon></metadata>",
+            f"<metadata><icon>{self.ICON}</icon><icon>{self.ICON}</icon></metadata>",
+            "<invalid",
+        ):
+            with self.subTest(metadata=metadata), self.assertRaisesRegex(ValueError, "icon|nuspec"):
+                self.verify_fixture(overrides={self.NUSPEC: f"<package>{metadata}</package>"})
