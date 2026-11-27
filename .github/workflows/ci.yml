@@ -1,0 +1,97 @@
+name: Managed CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  unit_tests:
+    name: Unit tests (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      STOCKFISH_UCI_PATH: ''
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        id: setup_python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+
+      - name: Run unit tests only
+        id: unit_tests
+        run: >-
+          dotnet test tests/Stockfish.Uci.UnitTests/Stockfish.Uci.UnitTests.csproj
+          --configuration Release
+          --results-directory "${{ runner.temp }}/stockfish-uci-unit-results"
+          --logger "trx;LogFileName=results.trx"
+
+      - name: Publish unit test summary
+        if: ${{ always() && steps.setup_python.outcome == 'success' }}
+        run: >-
+          python .github/scripts/summarize-tests.py
+          --suite unit
+          --trx "${{ runner.temp }}/stockfish-uci-unit-results/results.trx"
+          --outcome "${{ steps.unit_tests.outcome }}"
+          --job-status "${{ job.status }}"
+
+  managed:
+    needs: unit_tests
+    name: Managed (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    env:
+      STOCKFISH_UCI_PATH: ''
+    steps:
+      - name: Preserve repository line endings
+        run: git config --global core.autocrlf false
+
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore Stockfish.Uci.sln
+
+      - name: Build
+        run: dotnet build Stockfish.Uci.sln --configuration Release --no-restore
+
+      - name: Verify formatting
+        run: dotnet format Stockfish.Uci.sln --verify-no-changes --severity warn --no-restore
+
+      - name: Pack library only
+        run: dotnet pack src/Stockfish.Uci/Stockfish.Uci.csproj --configuration Release --no-build --output artifacts/packages
+
+      - name: Verify managed-only package
+        shell: bash
+        run: python scripts/verify-package.py --package artifacts/packages/*.nupkg

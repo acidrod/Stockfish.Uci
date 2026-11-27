@@ -1,0 +1,56 @@
+name: Stockfish integration
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 5 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    name: Stockfish 18 (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        id: setup_python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+
+      - name: Prepare official test engine in runner temp
+        run: python .github/scripts/prepare-stockfish.py
+
+      - name: Run real-engine integration tests
+        id: integration_tests
+        run: >-
+          dotnet test tests/Stockfish.Uci.IntegrationTests/Stockfish.Uci.IntegrationTests.csproj
+          --configuration Release
+          --results-directory "${{ runner.temp }}/stockfish-uci-integration-results"
+          --logger "console;verbosity=normal"
+          --logger "trx;LogFileName=results.trx"
+
+      - name: Publish integration test summary
+        if: ${{ always() && steps.setup_python.outcome == 'success' }}
+        run: >-
+          python .github/scripts/summarize-tests.py
+          --suite integration
+          --trx "${{ runner.temp }}/stockfish-uci-integration-results/results.trx"
+          --outcome "${{ steps.integration_tests.outcome }}"
+          --job-status "${{ job.status }}"
