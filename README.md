@@ -95,7 +95,7 @@ dotnet pack src/Stockfish.Uci/Stockfish.Uci.csproj --configuration Release --out
 python3 scripts/verify-package.py --package artifacts/packages/Stockfish.Uci.0.1.1.nupkg
 ```
 
-Only the library is packable. The package contains its managed assembly, README, original package icon (from v0.1.1) and NuGet metadata; samples, tests and engine executables are excluded. The verifier checks the exact package icon and rejects unexpected package entries, including native binaries. Use the version specified by the library project when naming the package.
+Only the library is packable. The package contains its managed assembly, README, original package icon (from v0.1.1) and NuGet metadata; samples, tests and engine executables are excluded. The verifier checks the exact package icon and the version-specific release notes generated from CHANGELOG.md, and rejects unexpected package entries, including native binaries. Use the version specified by the library project when naming the package.
 
 ## Documentation
 

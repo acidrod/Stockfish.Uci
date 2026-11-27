@@ -15,6 +15,7 @@ Changes to Stockfish.Uci are recorded here. Versions follow [Semantic Versioning
 
 - Package verification now requires the exact icon file and validates its metadata, PNG dimensions and size without relaxing native-binary restrictions.
 - Updated installation documentation and added a clean public-feed consumer verification procedure for published versions.
+- NuGet release notes now show the exact version’s changelog and a link to its GitHub release, rather than only a generic releases URL.
 
 ### Compatibility
 

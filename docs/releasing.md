@@ -20,7 +20,7 @@ Release creation, test execution and NuGet publication are deliberately separate
 
 ## Release notes and labels
 
-Maintain the user-facing changes in [CHANGELOG.md](../CHANGELOG.md). Apply the appropriate [PR labels](../CONTRIBUTING.md#labels); GitHub groups automatically generated notes according to [the release configuration](../.github/release.yml). Breaking changes and security fixes take precedence. Use `skip-changelog` for internal changes that should be omitted.
+Maintain the user-facing changes in [CHANGELOG.md](../CHANGELOG.md). It is the single source for both GitHub release notes and the version-specific NuGet Release Notes tab. During `dotnet pack` (including `--no-build`), an MSBuild target extracts the section matching the package version, formats it as plain text, and sets `PackageReleaseNotes`. Missing, duplicate or empty version sections cause packing to fail. The package verifier checks the embedded notes against the changelog; release verification uses the exact source commit. No manual notes or additional tooling are needed for packing. Apply the appropriate [PR labels](../CONTRIBUTING.md#labels); GitHub groups automatically generated notes according to [the release configuration](../.github/release.yml). Breaking changes and security fixes take precedence. Use `skip-changelog` for internal changes that should be omitted.
 
 ## Prepare a version
 
@@ -45,7 +45,7 @@ A version cannot be overwritten on NuGet.org. Correct a faulty publication with 
 
 Publication is complete only when the exact version is listed and a clean consumer can restore and use it from NuGet.org.
 
-- Open the [package page](https://www.nuget.org/packages/Stockfish.Uci), select the published version and verify its identity, listing, .NET target, README and license. From v0.1.1 onward, confirm that the package icon is displayed.
+- Open the [package page](https://www.nuget.org/packages/Stockfish.Uci), select the published version and verify its identity, listing, .NET target, README and license. From v0.1.1 onward, confirm that the package icon is displayed and the Release Notes tab shows the correct version’s changes and GitHub release link.
 - Record the successful publication run and the public package version URL. Keep the release's existing validation links as evidence for the exact source commit.
 
 Run the following Bash smoke test on a machine with the .NET 10 SDK. Set `version` to the **published** version being verified. It does not require Stockfish or a source checkout.

@@ -1,0 +1,70 @@
+<Project>
+  <PropertyGroup>
+    <StockfishChangelogPath Condition="'$(StockfishChangelogPath)' == ''">$(MSBuildProjectDirectory)/../../CHANGELOG.md</StockfishChangelogPath>
+  </PropertyGroup>
+
+  <!-- Pack runs on the SDK alone, including on Windows and when skipping compilation. -->
+  <UsingTask TaskName="StockfishReadReleaseNotes"
+             TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <ChangelogPath ParameterType="System.String" Required="true" />
+      <PackageVersion ParameterType="System.String" Required="true" />
+      <ReleaseNotes ParameterType="System.String" Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Linq" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        var lines = File.ReadAllLines(ChangelogPath);
+        var heading = "## [" + PackageVersion + "]";
+        var headings = Enumerable.Range(0, lines.Length)
+            .Where(index => lines[index].StartsWith(heading, StringComparison.Ordinal))
+            .ToArray();
+
+        if (headings.Length != 1)
+        {
+            Log.LogError("CHANGELOG.md must contain exactly one entry for " + PackageVersion + ".");
+            return false;
+        }
+
+        var section = lines.Skip(headings[0] + 1)
+            .TakeWhile(line => !line.StartsWith("## ", StringComparison.Ordinal))
+            .ToArray();
+
+        if (!section.Any(line => !string.IsNullOrWhiteSpace(line) &&
+                                 !line.TrimStart().StartsWith("#", StringComparison.Ordinal)))
+        {
+            Log.LogError("CHANGELOG.md entry for " + PackageVersion + " is empty.");
+            return false;
+        }
+
+        // NuGet Gallery displays preformatted text, not rendered Markdown.
+        var notes = string.Join("\n", section.Select(line =>
+            line.StartsWith("### ", StringComparison.Ordinal) ? line.Substring(4) : line)).Trim();
+
+        ReleaseNotes = "Stockfish.Uci " + PackageVersion + "\n\n" + notes +
+            "\n\nFull release: https://github.com/acidrod/Stockfish.Uci/releases/tag/v" + PackageVersion;
+
+        if (ReleaseNotes.Length > 35000)
+        {
+            Log.LogError("Package release notes exceed NuGet.org's 35,000 character limit.");
+            return false;
+        }
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="StockfishGeneratePackageReleaseNotes"
+          BeforeTargets="GenerateNuspec"
+          Condition="'$(IsPackable)' == 'true'">
+    <StockfishReadReleaseNotes ChangelogPath="$(StockfishChangelogPath)"
+                               PackageVersion="$(PackageVersion)">
+      <Output TaskParameter="ReleaseNotes" PropertyName="PackageReleaseNotes" />
+    </StockfishReadReleaseNotes>
+    <ItemGroup>
+      <!-- Repack if the changelog changes, even if the assembly is unchanged. -->
+      <NuGetPackInput Include="$(StockfishChangelogPath)" />
+    </ItemGroup>
+  </Target>
+</Project>
