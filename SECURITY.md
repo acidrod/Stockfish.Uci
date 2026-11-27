@@ -23,4 +23,4 @@ Stockfish itself is a separate upstream project. For vulnerabilities in Stockfis
 
 ## Release integrity
 
-Published releases use immutable GitHub tags and assets. The release process verifies the package contents, source commit, test evidence, asset attestations and SHA-256 checksum before trusted NuGet publication. See the [release procedure](docs/releasing.md) for details.
+Published releases use immutable GitHub tags and assets. The release process verifies the package contents, source commit, test evidence, asset attestations and SHA-256 checksum before trusted NuGet publication. The [published releases](https://github.com/acidrod/Stockfish.Uci/releases) contain the validation evidence and checksums.

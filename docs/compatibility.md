@@ -42,4 +42,4 @@ The single Linux unit-test job passed 119 tests. The integration workflow passed
 
 The release procedure requires both workflows to pass on the exact source commit before a draft release is prepared. The published release notes link that commit's evidence. A documentation or packaging-only update follows the same validation procedure; it does not inherit test results from v0.1.0.
 
-See [Releasing Stockfish.Uci](releasing.md) for release and public-package verification.
+See the [GitHub releases](https://github.com/acidrod/Stockfish.Uci/releases) and [NuGet package versions](https://www.nuget.org/packages/Stockfish.Uci) for published artifacts and validation evidence.
