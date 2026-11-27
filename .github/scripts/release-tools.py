@@ -112,7 +112,8 @@ def verify_package(directory: Path, version: str, commit: str, repo: str, seal: 
     if list(directory.glob("*.nupkg")) != [package]:
         raise ValueError(f"Expected exactly one package: {package.name}")
     subprocess.run(
-        [sys.executable, "scripts/verify-package.py", "--package", str(package)],
+        [sys.executable, "scripts/verify-package.py", "--package", str(package),
+         "--source-commit", commit],
         check=True,
     )
     with ZipFile(package) as archive:

@@ -2,6 +2,8 @@
 """Verify the expected managed-only Stockfish.Uci NuGet package layout."""
 
 import argparse
+import re
+import subprocess
 from pathlib import Path, PurePosixPath
 import xml.etree.ElementTree as ET
 from zipfile import BadZipFile, ZipFile
@@ -9,6 +11,8 @@ from zipfile import BadZipFile, ZipFile
 MANAGED_ASSEMBLY = "lib/net10.0/Stockfish.Uci.dll"
 PACKAGE_ICON = "stockfish-uci-icon.png"
 NUSPEC = "Stockfish.Uci.nuspec"
+ROOT = Path(__file__).resolve().parents[1]
+MAX_RELEASE_NOTES_LENGTH = 35_000
 MAX_ICON_SIZE = 1_000_000
 REQUIRED = {"README.md", MANAGED_ASSEMBLY, PACKAGE_ICON, NUSPEC}
 ALLOWED_FILES = REQUIRED | {
@@ -37,6 +41,48 @@ def is_core_properties(name: str) -> bool:
     )
 
 
+def package_release_notes(changelog: str, version: str) -> str:
+    """Independently derive the preformatted metadata expected from MSBuild."""
+    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9a-z.-]+)?", version):
+        raise ValueError("Invalid or missing package version in nuspec")
+    lines = changelog.splitlines()
+    heading = f"## [{version}]"
+    matches = [index for index, line in enumerate(lines) if line.startswith(heading)]
+    if len(matches) != 1:
+        raise ValueError(f"CHANGELOG.md must contain exactly one entry for {version}")
+
+    section = []
+    for line in lines[matches[0] + 1:]:
+        if line.startswith("## "):
+            break
+        section.append(line)
+    if not any(line.strip() and not line.lstrip().startswith("#") for line in section):
+        raise ValueError(f"CHANGELOG.md entry for {version} is empty")
+
+    notes = "\n".join(line[4:] if line.startswith("### ") else line for line in section).strip()
+    result = (
+        f"Stockfish.Uci {version}\n\n{notes}\n\n"
+        f"Full release: https://github.com/acidrod/Stockfish.Uci/releases/tag/v{version}"
+    )
+    if len(result.encode("utf-16-le")) // 2 > MAX_RELEASE_NOTES_LENGTH:
+        raise ValueError("Package release notes exceed NuGet.org's 35,000 character limit")
+    return result
+
+
+def verify_package_metadata(root: ET.Element, changelog: str) -> None:
+    icons = root.findall("./{*}metadata/{*}icon")
+    if len(icons) != 1 or icons[0].text != PACKAGE_ICON:
+        raise ValueError(f"NuGet icon metadata must reference {PACKAGE_ICON}")
+
+    versions = root.findall("./{*}metadata/{*}version")
+    if len(versions) != 1 or not versions[0].text:
+        raise ValueError("Missing or duplicate package version in nuspec")
+    expected = package_release_notes(changelog, versions[0].text)
+    notes = root.findall("./{*}metadata/{*}releaseNotes")
+    if len(notes) != 1 or len(notes[0]) != 0 or notes[0].text != expected:
+        raise ValueError("NuGet release notes must match the package version's CHANGELOG.md entry")
+
+
 def verify_package_icon(archive: ZipFile) -> None:
     if archive.getinfo(PACKAGE_ICON).file_size > MAX_ICON_SIZE:
         raise ValueError(f"Package icon exceeds the maximum size: {PACKAGE_ICON}")
@@ -56,16 +102,8 @@ def verify_package_icon(archive: ZipFile) -> None:
     if (width, height) != (128, 128):
         raise ValueError(f"Package icon must be 128x128 pixels: {PACKAGE_ICON}")
 
-    try:
-        root = ET.fromstring(archive.read(NUSPEC))
-    except ET.ParseError as error:
-        raise ValueError(f"Invalid nuspec metadata: {NUSPEC}") from error
-    icons = root.findall("./{*}metadata/{*}icon")
-    if len(icons) != 1 or icons[0].text != PACKAGE_ICON:
-        raise ValueError(f"NuGet icon metadata must reference {PACKAGE_ICON}")
 
-
-def verify_package(package: Path) -> None:
+def verify_package(package: Path, changelog: str | None = None) -> None:
     with ZipFile(package) as archive:
         seen: set[str] = set()
 
@@ -101,6 +139,13 @@ def verify_package(package: Path) -> None:
                 raise ValueError(f"Required package entry is empty: {name}")
 
         verify_package_icon(archive)
+        try:
+            root = ET.fromstring(archive.read(NUSPEC))
+        except ET.ParseError as error:
+            raise ValueError(f"Invalid nuspec metadata: {NUSPEC}") from error
+        if changelog is None:
+            changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        verify_package_metadata(root, changelog)
 
         corrupt = archive.testzip()
         if corrupt is not None:
@@ -110,11 +155,20 @@ def verify_package(package: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--package", required=True, type=Path, help="Path to a .nupkg file")
+    parser.add_argument("--source-commit", help="Read CHANGELOG.md from an exact Git source commit")
     args = parser.parse_args()
 
     try:
-        verify_package(args.package)
-    except (BadZipFile, OSError, RuntimeError, ValueError) as error:
+        changelog = None
+        if args.source_commit:
+            if not re.fullmatch(r"[0-9a-f]{40}", args.source_commit):
+                raise ValueError("Expected a full 40-character Git commit SHA")
+            changelog = subprocess.run(
+                ["git", "show", f"{args.source_commit}:CHANGELOG.md"],
+                cwd=ROOT, check=True, capture_output=True, encoding="utf-8",
+            ).stdout
+        verify_package(args.package, changelog)
+    except (BadZipFile, OSError, RuntimeError, ValueError, subprocess.CalledProcessError) as error:
         parser.exit(1, f"Package validation failed: {error}\n")
 
     print("Managed-only package validation passed.")
