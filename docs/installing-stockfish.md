@@ -33,7 +33,7 @@ From the repository root, run the sample and opt-in integration tests:
 $stockfishPath = 'C:\Tools\Stockfish\stockfish-windows-x86-64.exe'
 dotnet run --project samples/BasicAnalysis/BasicAnalysis.csproj -- $stockfishPath
 $env:STOCKFISH_UCI_PATH = $stockfishPath
-dotnet test -c Release
+dotnet test tests/Stockfish.Uci.IntegrationTests/Stockfish.Uci.IntegrationTests.csproj -c Release
 Remove-Item Env:STOCKFISH_UCI_PATH
 ```
 
@@ -50,7 +50,7 @@ Enter `uci`, `isready`, then `quit`. On a system where the verified absolute pat
 
 ```bash
 dotnet run --project samples/BasicAnalysis/BasicAnalysis.csproj -- /usr/bin/stockfish
-STOCKFISH_UCI_PATH=/usr/bin/stockfish dotnet test -c Release
+STOCKFISH_UCI_PATH=/usr/bin/stockfish dotnet test tests/Stockfish.Uci.IntegrationTests/Stockfish.Uci.IntegrationTests.csproj -c Release
 ```
 
 Adjust the path when your distribution installs Stockfish elsewhere.
@@ -69,7 +69,7 @@ Enter `uci`, `isready`, then `quit`. Pass the absolute result of `command -v sto
 ```bash
 stockfish_path="$(command -v stockfish)"
 dotnet run --project samples/BasicAnalysis/BasicAnalysis.csproj -- "$stockfish_path"
-STOCKFISH_UCI_PATH="$stockfish_path" dotnet test -c Release
+STOCKFISH_UCI_PATH="$stockfish_path" dotnet test tests/Stockfish.Uci.IntegrationTests/Stockfish.Uci.IntegrationTests.csproj -c Release
 ```
 
 If you installed Stockfish outside your shell's PATH, use its known absolute path instead.
@@ -80,6 +80,6 @@ A valid UCI engine responds with identity/options followed by `uciok` after rece
 
 ## Version policy
 
-The sample is a separate project in the Git repository, not part of the NuGet package. The integration suite is skipped unless `STOCKFISH_UCI_PATH` names a user-supplied executable.
+The sample is a separate project in the Git repository, not part of the NuGet package. The integration tests require `STOCKFISH_UCI_PATH` to name a user-supplied executable; they are skipped when the variable is unset. See the [integration workflow](https://github.com/acidrod/Stockfish.Uci/actions/workflows/integration.yml) for recorded platform results.
 
 The NuGet package version and the external Stockfish version are independent. The library records engine identity/options at startup and supports its UCI contract; the project documentation identifies versions that have been exercised by integration tests.

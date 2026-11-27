@@ -4,10 +4,12 @@
     <RootNamespace>Stockfish.Uci</RootNamespace>
     <PackageId>Stockfish.Uci</PackageId>
     <Version>0.1.0</Version>
+    <Authors>Rodrigo Alarcón</Authors>
     <Description>A modern, strongly typed .NET client for Universal Chess Interface engines, designed to provide analysis backed by Stockfish.</Description>
     <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://github.com/acidrod/Stockfish.Uci</PackageProjectUrl>
+    <PackageReleaseNotes>https://github.com/acidrod/Stockfish.Uci/releases</PackageReleaseNotes>
     <RepositoryUrl>https://github.com/acidrod/Stockfish.Uci</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>chess;uci;stockfish;chess-engine</PackageTags>
