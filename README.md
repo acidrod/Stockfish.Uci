@@ -12,7 +12,15 @@ Install Stockfish yourself and pass its absolute executable path when creating t
 
 ## Status
 
-The managed .NET 10 wrapper implements engine startup, UCI option discovery, bounded analysis, MultiPV, streaming, cancellation and process cleanup. Integration tests have exercised Stockfish 18 on Linux. Windows and macOS setup is documented below; automated cross-platform compatibility testing is pending. Version 0.1.0 is under development and has not been published to NuGet.org.
+The managed .NET 10 wrapper implements engine startup, UCI option discovery, bounded analysis, MultiPV, streaming, cancellation and process cleanup. Version 0.1.0 is under development and has not been published to NuGet.org.
+
+## Platform testing
+
+[Managed CI](https://github.com/acidrod/Stockfish.Uci/actions/workflows/ci.yml) has passed build, tests, formatting and package verification on Windows, Linux and macOS, without configuring a Stockfish executable.
+
+Local real-engine integration tests have passed with Stockfish 18 on Linux. The separate [Stockfish integration workflow](https://github.com/acidrod/Stockfish.Uci/actions/workflows/integration.yml) is configured for manual and weekly runs on the three operating systems using official, checksum-verified Stockfish release assets in temporary runner directories. It does not run on pull requests or publish engine binaries. Cross-platform real-engine CI verification is still pending; the manual workflow becomes available when its definition reaches the default branch.
+
+Your application remains responsible for selecting, installing and licensing its engine binary.
 
 ## Quick start
 
