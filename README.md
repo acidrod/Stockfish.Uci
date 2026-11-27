@@ -1,50 +1,44 @@
 # Stockfish.Uci
 
-> **Work in progress.** A modern, strongly typed .NET client for Universal Chess Interface (UCI) engines, designed for analysis with a user-installed Stockfish executable.
+[![Managed CI](https://github.com/acidrod/Stockfish.Uci/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/acidrod/Stockfish.Uci/actions/workflows/ci.yml)
+[![Stockfish integration](https://github.com/acidrod/Stockfish.Uci/actions/workflows/integration.yml/badge.svg?branch=main)](https://github.com/acidrod/Stockfish.Uci/actions/workflows/integration.yml)
+[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](https://github.com/acidrod/Stockfish.Uci/blob/main/LICENSE)
 
-`Stockfish.Uci` converts the line-based UCI protocol into typed .NET objects such as `AnalysisResult`, `PrincipalVariation`, `Evaluation`, and `UciMove`.
+A strongly typed .NET client for Universal Chess Interface (UCI) engines, designed for analysis with a user-installed Stockfish executable.
 
-## What this package does—and does not—contain
+[Releases](https://github.com/acidrod/Stockfish.Uci/releases) · [Changelog](https://github.com/acidrod/Stockfish.Uci/blob/main/CHANGELOG.md) · [Issues](https://github.com/acidrod/Stockfish.Uci/issues)
 
-This package contains managed .NET code only. It does **not** download, bundle, redistribute, select, or update Stockfish binaries.
+## Features
 
-Install Stockfish yourself and pass its absolute executable path when creating the client. See [installing Stockfish](docs/installing-stockfish.md).
+- Start and manage an external UCI engine process.
+- Discover engine identity and supported options.
+- Analyze positions with depth and time limits, including MultiPV.
+- Stream analysis updates, cancel searches and dispose of the engine asynchronously.
+- Work with typed moves, evaluations, principal variations and analysis results.
 
-## Status
+The NuGet package contains **managed .NET code only**. It does not download, bundle, redistribute, select or update Stockfish binaries. Your application remains responsible for installing and licensing its engine executable.
 
-The managed .NET 10 wrapper implements engine startup, UCI option discovery, bounded analysis, MultiPV, streaming, cancellation and process cleanup. Version 0.1.0 is under development and has not been published to NuGet.org.
+## Getting started
 
-## Platform testing
+### Requirements
 
-[Managed CI](https://github.com/acidrod/Stockfish.Uci/actions/workflows/ci.yml) builds the solution, verifies formatting and checks the managed-only NuGet package on Windows, Linux and macOS. The Unit tests job runs the unit test project once on Linux, without configuring a Stockfish executable. The build and package matrix starts only if the unit tests and their report succeed. The integration tests are not discovered or counted there.
+- .NET 10.
+- A separately installed Stockfish executable appropriate for your operating system and CPU.
 
-Local real-engine integration tests have passed with Stockfish 18 on Linux. The separate [Stockfish integration workflow](https://github.com/acidrod/Stockfish.Uci/actions/workflows/integration.yml) is configured for manual and weekly runs on the three operating systems using official, checksum-verified Stockfish release assets in temporary runner directories. It does not run on pull requests or publish engine binaries. Cross-platform real-engine CI verification is still pending; the manual workflow becomes available when its definition reaches the default branch.
+Follow the [Stockfish installation guide](https://github.com/acidrod/Stockfish.Uci/blob/main/docs/installing-stockfish.md) to locate and verify your engine.
 
-The unit test job and each platform-specific integration job publish a test report on their GitHub Actions run summary, with pass/fail/skip counts, duration and expandable individual test results.
+### Install the library
 
-Your application remains responsible for selecting, installing and licensing its engine binary.
-
-## Quick start
-
-1. Install Stockfish as described in [installing Stockfish](docs/installing-stockfish.md).
-2. Pass its absolute executable path to `StockfishEngineOptions`.
-3. From the repository root, run the separate, non-packable console sample.
-
-Linux or macOS (replace the path with your installed executable):
+Once the first version is published, install the released package from NuGet.org:
 
 ```bash
-dotnet run --project samples/BasicAnalysis/BasicAnalysis.csproj -- /absolute/path/to/stockfish
+dotnet add package Stockfish.Uci --version 0.1.0
 ```
 
-Windows (PowerShell):
+Check [NuGet.org](https://www.nuget.org/packages/Stockfish.Uci) and [GitHub Releases](https://github.com/acidrod/Stockfish.Uci/releases) for available versions. For development before publication, build the library from source or use the local package instructions below.
 
-```powershell
-dotnet run --project samples/BasicAnalysis/BasicAnalysis.csproj -- 'C:\Tools\Stockfish\stockfish-windows-x86-64.exe'
-```
-
-The sample prints the engine name, the best move, and its principal variations. The engine remains external to the application and package.
-
-## Library usage
+### Analyze a position
 
 ```csharp
 using Stockfish.Uci;
@@ -63,25 +57,56 @@ foreach (var variation in result.Variations)
 }
 ```
 
-Use `startpos` or `fen <six FEN fields>` with optional UCI moves, without the `position` prefix. Set a depth, move time, or both. Use `AnalyzeStreamingAsync` for live updates; pass a cancellation token to stop a search. Only one search may run on an engine instance at a time.
+Replace the executable path with your installed engine's absolute path. Use `startpos` or `fen <six FEN fields>` with optional UCI moves, without the `position` prefix. Set a depth, move time or both. Use `AnalyzeStreamingAsync` for live updates; pass a cancellation token to stop a search. Only one search may run on an engine instance at a time.
 
-## Build and inspect the local NuGet package
+### Run the sample from source
 
-From the repository root:
+From the repository root, run the standalone, non-packable BasicAnalysis console project.
+
+Linux or macOS:
+
+```bash
+dotnet run --project samples/BasicAnalysis/BasicAnalysis.csproj -- /absolute/path/to/stockfish
+```
+
+Windows (PowerShell):
+
+```powershell
+dotnet run --project samples/BasicAnalysis/BasicAnalysis.csproj -- 'C:\Tools\Stockfish\stockfish-windows-x86-64.exe'
+```
+
+The sample prints the engine name, best move and principal variations.
+
+## Quality and platform validation
+
+| Workflow | Scope | Trigger |
+| --- | --- | --- |
+| [Managed CI](https://github.com/acidrod/Stockfish.Uci/actions/workflows/ci.yml) | Unit tests once on Linux; then build, formatting and package validation on Windows, Linux and macOS | PRs and pushes to `main` |
+| [Stockfish integration](https://github.com/acidrod/Stockfish.Uci/actions/workflows/integration.yml) | Real-engine tests using official, checksum-verified Stockfish 18 assets on Windows, Linux and macOS | Manual and weekly |
+
+Unit tests require no installed engine. Real-engine integration tests have passed locally with Stockfish 18 on Linux; consult the workflow results for evidence on each other platform and the release notes for the runs associated with each released commit. CI downloads an engine only into temporary integration-runner directories and does not publish it as an artifact.
+
+The unit-test job and each integration job include a GitHub Actions summary with pass/fail/skip counts, duration and expandable individual results.
+
+## Build and inspect the local package
 
 ```bash
 dotnet pack src/Stockfish.Uci/Stockfish.Uci.csproj --configuration Release --output artifacts/packages
 python3 scripts/verify-package.py --package artifacts/packages/Stockfish.Uci.0.1.0.nupkg
 ```
 
-Only the library is packable. The package contains its managed assembly, README and NuGet metadata; the sample, tests and engine executables are excluded. The verifier rejects unexpected package entries.
+Only the library is packable. The package contains its managed assembly, README and NuGet metadata; samples, tests and engine executables are excluded. The verifier rejects unexpected package entries. Use the version specified by the library project when naming the package.
 
-## License and third-party notices
+## Documentation
 
-This repository is licensed under the [GNU General Public License v3.0](LICENSE). Stockfish is independently licensed under GPLv3; this package does not include Stockfish code or binaries. See [NOTICE.md](NOTICE.md).
+- [Installing Stockfish](https://github.com/acidrod/Stockfish.Uci/blob/main/docs/installing-stockfish.md)
+- [Contributing and local validation](https://github.com/acidrod/Stockfish.Uci/blob/main/CONTRIBUTING.md)
+- [Release procedure](https://github.com/acidrod/Stockfish.Uci/blob/main/docs/releasing.md)
+- [Security policy](https://github.com/acidrod/Stockfish.Uci/blob/main/SECURITY.md)
+- [Changelog](https://github.com/acidrod/Stockfish.Uci/blob/main/CHANGELOG.md)
+
+## License and notices
+
+This project is licensed under the [GNU General Public License v3.0](https://github.com/acidrod/Stockfish.Uci/blob/main/LICENSE). Stockfish is independently licensed under GPLv3; this package does not include Stockfish code or binaries. See [third-party notices](https://github.com/acidrod/Stockfish.Uci/blob/main/NOTICE.md).
 
 This is an independent, unofficial project and is not affiliated with or endorsed by the Stockfish project.
-
-## Contributing
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening an issue or pull request.

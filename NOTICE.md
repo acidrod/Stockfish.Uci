@@ -4,7 +4,7 @@
 
 [Stockfish](https://stockfishchess.org/) is a chess engine distributed under the GNU General Public License version 3 (GPL-3.0). Copyright belongs to the Stockfish developers; see the upstream project for its complete copyright notices.
 
-At this repository revision, **no Stockfish binary, Stockfish source code, or other Stockfish artifact is included or redistributed**.
+**No Stockfish binary, source code or other Stockfish artifact is included in the repository, NuGet package or release assets.** The integration workflow obtains official Stockfish release assets in temporary runner directories solely to execute tests; it does not publish those assets.
 
 Users obtain and manage their own Stockfish installation. The package communicates with the user-supplied executable through the published UCI text protocol.
 

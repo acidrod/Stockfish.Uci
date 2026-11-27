@@ -1,0 +1,129 @@
+name: Publish NuGet
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version of an immutable GitHub release (for example, 0.1.0)'
+        required: true
+        type: string
+      publish_to_nuget:
+        description: 'Publish to NuGet.org after validation (irreversible version)'
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nuget-publication
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Verify published GitHub release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+    steps:
+      - name: Check out main and tags
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Verify release tag, evidence and exact release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::Publish releases from main only."
+            exit 1
+          fi
+          python .github/scripts/release-tools.py version --version "$RELEASE_VERSION"
+          tag="v$RELEASE_VERSION"
+          commit=$(git rev-parse "refs/tags/$tag^{commit}")
+          git merge-base --is-ancestor "$commit" HEAD
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" \
+            --json isDraft,isImmutable,tagName \
+            --jq 'select(.isDraft == false and .isImmutable == true) | .tagName' \
+            | grep -Fx "$tag"
+          gh release verify "$tag" --repo "$GITHUB_REPOSITORY"
+          python .github/scripts/release-tools.py evidence \
+            --commit "$commit" --repository "$GITHUB_REPOSITORY"
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" \
+            --dir "$RUNNER_TEMP/stockfish-release" \
+            --pattern "Stockfish.Uci.$RELEASE_VERSION.nupkg" --pattern SHA256SUMS
+          gh release verify-asset "$tag" \
+            "$RUNNER_TEMP/stockfish-release/Stockfish.Uci.$RELEASE_VERSION.nupkg" --repo "$GITHUB_REPOSITORY"
+          gh release verify-asset "$tag" "$RUNNER_TEMP/stockfish-release/SHA256SUMS" --repo "$GITHUB_REPOSITORY"
+          python .github/scripts/release-tools.py verify \
+            --version "$RELEASE_VERSION" --commit "$commit" \
+            --repository "$GITHUB_REPOSITORY" --directory "$RUNNER_TEMP/stockfish-release"
+          printf '## Verified package\n\n- Release: [v%s](https://github.com/%s/releases/tag/v%s)\n- Source commit: `%s`\n- Release is immutable; asset attestations and checksum verified.\n' \
+            "$RELEASE_VERSION" "$GITHUB_REPOSITORY" "$RELEASE_VERSION" "$commit" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the exact verified release package
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: verified-nuget-package
+          path: ${{ runner.temp }}/stockfish-release/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish verified package to NuGet.org
+    needs: validate
+    if: ${{ inputs.publish_to_nuget && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: nuget
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+    steps:
+      - name: Download verified package
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: verified-nuget-package
+          path: ${{ runner.temp }}/stockfish-release
+
+      - name: Verify transferred package
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP/stockfish-release"
+          sha256sum --check SHA256SUMS
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Obtain temporary NuGet API key
+        id: nuget_login
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push the original verified NuGet package
+        env:
+          NUGET_API_KEY: ${{ steps.nuget_login.outputs.NUGET_API_KEY }}
+        shell: bash
+        run: |
+          dotnet nuget push "$RUNNER_TEMP/stockfish-release/Stockfish.Uci.$RELEASE_VERSION.nupkg" \
+            --source https://api.nuget.org/v3/index.json
+          printf '## NuGet upload succeeded\n\n[Stockfish.Uci %s](https://www.nuget.org/packages/Stockfish.Uci/%s)\n\nNuGet.org validation and indexing may still be in progress.\n' \
+            "$RELEASE_VERSION" "$RELEASE_VERSION" >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,137 @@
+name: Prepare GitHub release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version from the library project (for example, 0.1.0)'
+        required: true
+        type: string
+      create_draft:
+        description: 'Create a draft GitHub release after validation'
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-release
+  cancel-in-progress: false
+
+jobs:
+  package:
+    name: Validate and prepare release package
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Check version, source and validation evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::Prepare releases from main only."
+            exit 1
+          fi
+          python .github/scripts/release-tools.py prepare \
+            --version "$RELEASE_VERSION" --commit "$GITHUB_SHA" \
+            --repository "$GITHUB_REPOSITORY" \
+            --notes-file "$RUNNER_TEMP/stockfish-release/release-notes.md"
+          if git show-ref --verify --quiet "refs/tags/v$RELEASE_VERSION"; then
+            echo "::error::Release tag already exists."
+            exit 1
+          fi
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+
+      - name: Pack managed library from the validated commit
+        shell: bash
+        run: |
+          dotnet pack src/Stockfish.Uci/Stockfish.Uci.csproj --configuration Release \
+            --output "$RUNNER_TEMP/stockfish-release" -p:ContinuousIntegrationBuild=true \
+            -p:RepositoryCommit="$GITHUB_SHA" -p:RepositoryBranch=main
+
+      - name: Verify package and calculate SHA-256
+        shell: bash
+        run: |
+          python .github/scripts/release-tools.py seal \
+            --version "$RELEASE_VERSION" --commit "$GITHUB_SHA" \
+            --repository "$GITHUB_REPOSITORY" --directory "$RUNNER_TEMP/stockfish-release"
+
+      - name: Smoke test the package as a consumer
+        shell: bash
+        run: |
+          bash .github/scripts/smoke-test-package.sh "$RUNNER_TEMP/stockfish-release" "$RELEASE_VERSION"
+
+      - name: Upload verified release bundle
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: release-bundle
+          path: ${{ runner.temp }}/stockfish-release/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Release preparation report
+        shell: bash
+        run: |
+          cat "$RUNNER_TEMP/stockfish-release/release-notes.md" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Verified package" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/stockfish-release/SHA256SUMS" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  draft:
+    name: Create draft release
+    needs: package
+    if: ${{ inputs.create_draft && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+    steps:
+      - name: Download verified release bundle
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: release-bundle
+          path: ${{ runner.temp }}/stockfish-release
+
+      - name: Verify bundle and create draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP/stockfish-release"
+          sha256sum --check SHA256SUMS
+          flags=()
+          if [[ "$RELEASE_VERSION" == *-* ]]; then
+            flags+=(--prerelease)
+          fi
+          url=$(gh release create "v$RELEASE_VERSION" \
+            "Stockfish.Uci.$RELEASE_VERSION.nupkg" SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" --draft --target "$GITHUB_SHA" \
+            --title "Stockfish.Uci v$RELEASE_VERSION" \
+            --notes-file release-notes.md --generate-notes "${flags[@]}")
+          printf '## Draft release prepared\n\n[Review the release](%s)\n\nNo package was published to NuGet.org.\n' "$url" >> "$GITHUB_STEP_SUMMARY"
