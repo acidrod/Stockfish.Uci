@@ -58,7 +58,7 @@ On Windows, set the environment variable as shown in the [installation guide](do
 
 Before a packaging change, also build and verify the managed-only package using the [README](README.md#build-and-inspect-the-local-package).
 
-Managed CI runs on pull requests; the real-engine workflow runs separately on demand and weekly. Both workflows must pass on the exact release commit before a release can be prepared. See [releasing Stockfish.Uci](docs/releasing.md).
+Managed CI runs on pull requests; the real-engine workflow runs separately on demand and weekly. Both workflows must pass on the exact release commit before a release can be prepared. Release creation and NuGet publication are handled by the project maintainer; contributors do not need publishing access.
 
 ## Security
 

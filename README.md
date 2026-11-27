@@ -102,7 +102,6 @@ Only the library is packable. The package contains its managed assembly, README,
 - [Installing Stockfish](https://github.com/acidrod/Stockfish.Uci/blob/main/docs/installing-stockfish.md)
 - [Compatibility policy](https://github.com/acidrod/Stockfish.Uci/blob/main/docs/compatibility.md)
 - [Contributing and local validation](https://github.com/acidrod/Stockfish.Uci/blob/main/CONTRIBUTING.md)
-- [Release procedure](https://github.com/acidrod/Stockfish.Uci/blob/main/docs/releasing.md)
 - [Security policy](https://github.com/acidrod/Stockfish.Uci/blob/main/SECURITY.md)
 - [Changelog](https://github.com/acidrod/Stockfish.Uci/blob/main/CHANGELOG.md)
 
