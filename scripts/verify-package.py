@@ -3,12 +3,15 @@
 
 import argparse
 from pathlib import Path, PurePosixPath
+import xml.etree.ElementTree as ET
 from zipfile import BadZipFile, ZipFile
 
 MANAGED_ASSEMBLY = "lib/net10.0/Stockfish.Uci.dll"
-REQUIRED = {"README.md", MANAGED_ASSEMBLY}
+PACKAGE_ICON = "stockfish-uci-icon.png"
+NUSPEC = "Stockfish.Uci.nuspec"
+MAX_ICON_SIZE = 1_000_000
+REQUIRED = {"README.md", MANAGED_ASSEMBLY, PACKAGE_ICON, NUSPEC}
 ALLOWED_FILES = REQUIRED | {
-    "Stockfish.Uci.nuspec",
     "_rels/.rels",
     "[Content_Types].xml",
 }
@@ -32,6 +35,34 @@ def is_core_properties(name: str) -> bool:
         and path.suffix == ".psmdcp"
         and str(path) == name
     )
+
+
+def verify_package_icon(archive: ZipFile) -> None:
+    if archive.getinfo(PACKAGE_ICON).file_size > MAX_ICON_SIZE:
+        raise ValueError(f"Package icon exceeds the maximum size: {PACKAGE_ICON}")
+
+    # Check the PNG signature, IHDR chunk and dimensions without introducing
+    # an image-library dependency into the package verification workflow.
+    data = archive.read(PACKAGE_ICON)
+    if (
+        len(data) < 45
+        or not data.startswith(b"\x89PNG\r\n\x1a\n\x00\x00\x00\x0dIHDR")
+        or not data.endswith(b"\x00\x00\x00\x00IEND\xaeB`\x82")
+    ):
+        raise ValueError(f"Invalid PNG structure: {PACKAGE_ICON}")
+
+    width = int.from_bytes(data[16:20], "big")
+    height = int.from_bytes(data[20:24], "big")
+    if (width, height) != (128, 128):
+        raise ValueError(f"Package icon must be 128x128 pixels: {PACKAGE_ICON}")
+
+    try:
+        root = ET.fromstring(archive.read(NUSPEC))
+    except ET.ParseError as error:
+        raise ValueError(f"Invalid nuspec metadata: {NUSPEC}") from error
+    icons = root.findall("./{*}metadata/{*}icon")
+    if len(icons) != 1 or icons[0].text != PACKAGE_ICON:
+        raise ValueError(f"NuGet icon metadata must reference {PACKAGE_ICON}")
 
 
 def verify_package(package: Path) -> None:
@@ -68,6 +99,8 @@ def verify_package(package: Path) -> None:
         for name in REQUIRED:
             if archive.getinfo(name).file_size == 0:
                 raise ValueError(f"Required package entry is empty: {name}")
+
+        verify_package_icon(archive)
 
         corrupt = archive.testzip()
         if corrupt is not None:
