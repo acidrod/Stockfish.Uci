@@ -29,15 +29,16 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Set up Python
+        id: setup_python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+
       - name: Set up .NET
         uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with:
           global-json-file: global.json
-
-      - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
-        with:
-          python-version: '3.12'
 
       - name: Restore
         run: dotnet restore Stockfish.Uci.sln
@@ -45,8 +46,13 @@ jobs:
       - name: Build
         run: dotnet build Stockfish.Uci.sln --configuration Release --no-restore
 
-      - name: Test without an engine
-        run: dotnet test Stockfish.Uci.sln --configuration Release --no-build
+      - name: Run unit tests only
+        id: unit_tests
+        run: >-
+          dotnet test tests/Stockfish.Uci.UnitTests/Stockfish.Uci.UnitTests.csproj
+          --configuration Release --no-build
+          --results-directory "${{ runner.temp }}/stockfish-uci-unit-results"
+          --logger "trx;LogFileName=results.trx"
 
       - name: Verify formatting
         run: dotnet format Stockfish.Uci.sln --verify-no-changes --severity warn --no-restore
@@ -57,3 +63,12 @@ jobs:
       - name: Verify managed-only package
         shell: bash
         run: python scripts/verify-package.py --package artifacts/packages/*.nupkg
+
+      - name: Publish unit test summary
+        if: ${{ always() && steps.setup_python.outcome == 'success' }}
+        run: >-
+          python .github/scripts/summarize-tests.py
+          --suite unit
+          --trx "${{ runner.temp }}/stockfish-uci-unit-results/results.trx"
+          --outcome "${{ steps.unit_tests.outcome }}"
+          --job-status "${{ job.status }}"

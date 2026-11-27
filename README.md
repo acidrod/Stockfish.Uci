@@ -16,9 +16,11 @@ The managed .NET 10 wrapper implements engine startup, UCI option discovery, bou
 
 ## Platform testing
 
-[Managed CI](https://github.com/acidrod/Stockfish.Uci/actions/workflows/ci.yml) has passed build, tests, formatting and package verification on Windows, Linux and macOS, without configuring a Stockfish executable.
+[Managed CI](https://github.com/acidrod/Stockfish.Uci/actions/workflows/ci.yml) has passed build, tests, formatting and package verification on Windows, Linux and macOS, without configuring a Stockfish executable. The managed workflow runs only the unit test project; the integration tests are not discovered or counted there.
 
 Local real-engine integration tests have passed with Stockfish 18 on Linux. The separate [Stockfish integration workflow](https://github.com/acidrod/Stockfish.Uci/actions/workflows/integration.yml) is configured for manual and weekly runs on the three operating systems using official, checksum-verified Stockfish release assets in temporary runner directories. It does not run on pull requests or publish engine binaries. Cross-platform real-engine CI verification is still pending; the manual workflow becomes available when its definition reaches the default branch.
+
+Both workflows publish a per-platform test report on their GitHub Actions run summary, with pass/fail/skip counts, duration and expandable individual test results.
 
 Your application remains responsible for selecting, installing and licensing its engine binary.
 
