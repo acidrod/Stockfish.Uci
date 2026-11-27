@@ -10,6 +10,46 @@ permissions:
   contents: read
 
 jobs:
+  unit_tests:
+    name: Unit tests (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      STOCKFISH_UCI_PATH: ''
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        id: setup_python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+
+      - name: Run unit tests only
+        id: unit_tests
+        run: >-
+          dotnet test tests/Stockfish.Uci.UnitTests/Stockfish.Uci.UnitTests.csproj
+          --configuration Release
+          --results-directory "${{ runner.temp }}/stockfish-uci-unit-results"
+          --logger "trx;LogFileName=results.trx"
+
+      - name: Publish unit test summary
+        if: ${{ always() && steps.setup_python.outcome == 'success' }}
+        run: >-
+          python .github/scripts/summarize-tests.py
+          --suite unit
+          --trx "${{ runner.temp }}/stockfish-uci-unit-results/results.trx"
+          --outcome "${{ steps.unit_tests.outcome }}"
+          --job-status "${{ job.status }}"
+
   managed:
     name: Managed (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -30,7 +70,6 @@ jobs:
           persist-credentials: false
 
       - name: Set up Python
-        id: setup_python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.12'
@@ -46,14 +85,6 @@ jobs:
       - name: Build
         run: dotnet build Stockfish.Uci.sln --configuration Release --no-restore
 
-      - name: Run unit tests only
-        id: unit_tests
-        run: >-
-          dotnet test tests/Stockfish.Uci.UnitTests/Stockfish.Uci.UnitTests.csproj
-          --configuration Release --no-build
-          --results-directory "${{ runner.temp }}/stockfish-uci-unit-results"
-          --logger "trx;LogFileName=results.trx"
-
       - name: Verify formatting
         run: dotnet format Stockfish.Uci.sln --verify-no-changes --severity warn --no-restore
 
@@ -63,12 +94,3 @@ jobs:
       - name: Verify managed-only package
         shell: bash
         run: python scripts/verify-package.py --package artifacts/packages/*.nupkg
-
-      - name: Publish unit test summary
-        if: ${{ always() && steps.setup_python.outcome == 'success' }}
-        run: >-
-          python .github/scripts/summarize-tests.py
-          --suite unit
-          --trx "${{ runner.temp }}/stockfish-uci-unit-results/results.trx"
-          --outcome "${{ steps.unit_tests.outcome }}"
-          --job-status "${{ job.status }}"
