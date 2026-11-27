@@ -3,7 +3,7 @@
     <AssemblyName>Stockfish.Uci</AssemblyName>
     <RootNamespace>Stockfish.Uci</RootNamespace>
     <PackageId>Stockfish.Uci</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <PackageIcon>stockfish-uci-icon.png</PackageIcon>
     <Authors>Rodrigo Alarcón</Authors>
     <Description>A modern, strongly typed .NET client for Universal Chess Interface engines, designed to provide analysis backed by Stockfish.</Description>
