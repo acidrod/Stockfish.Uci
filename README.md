@@ -110,3 +110,11 @@ Only the library is packable. The package contains its managed assembly, README,
 This project is licensed under the [GNU General Public License v3.0](https://github.com/acidrod/Stockfish.Uci/blob/main/LICENSE). Stockfish is independently licensed under GPLv3; this package does not include Stockfish code or binaries. See [third-party notices](https://github.com/acidrod/Stockfish.Uci/blob/main/NOTICE.md).
 
 This is an independent, unofficial project and is not affiliated with or endorsed by the Stockfish project.
+
+## Author and Maintainer
+
+**Rodrigo Alarcón Santini** — Software Engineer | .NET Tech Lead
+
+Stockfish.Uci is an independent open-source project created and maintained by Rodrigo Alarcón Santini.
+
+[![GitHub](https://img.shields.io/badge/GitHub-acidrod-181717?logo=github&logoColor=white)](https://github.com/acidrod) [![LinkedIn](https://img.shields.io/badge/LinkedIn-Rodrigo%20Alarc%C3%B3n%20Santini-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/rodrigoalarcon1/)
