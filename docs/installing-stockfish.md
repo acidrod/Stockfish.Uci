@@ -22,10 +22,20 @@ C:\Tools\Stockfish\stockfish-windows-x86-64.exe
 In PowerShell, verify it starts:
 
 ```powershell
-& 'C:\Tools\Stockfish\stockfish-windows-x86-64.exe' uci
+& 'C:\Tools\Stockfish\stockfish-windows-x86-64.exe'
 ```
 
-Pass the same absolute path to `StockfishEngineOptions`.
+Enter `uci`, `isready`, then `quit`. Pass the same absolute path to `StockfishEngineOptions`.
+
+From the repository root, run the sample and opt-in integration tests:
+
+```powershell
+$stockfishPath = 'C:\Tools\Stockfish\stockfish-windows-x86-64.exe'
+dotnet run --project samples/BasicAnalysis/BasicAnalysis.csproj -- $stockfishPath
+$env:STOCKFISH_UCI_PATH = $stockfishPath
+dotnet test -c Release
+Remove-Item Env:STOCKFISH_UCI_PATH
+```
 
 ## Linux
 
@@ -33,10 +43,17 @@ Install Stockfish through the distribution's package manager or from the officia
 
 ```bash
 command -v stockfish
-stockfish uci
+stockfish
 ```
 
-For this development machine, the verified system path is `/usr/bin/stockfish`; another distribution may use a different location.
+Enter `uci`, `isready`, then `quit`. On a system where the verified absolute path is `/usr/bin/stockfish`, run:
+
+```bash
+dotnet run --project samples/BasicAnalysis/BasicAnalysis.csproj -- /usr/bin/stockfish
+STOCKFISH_UCI_PATH=/usr/bin/stockfish dotnet test -c Release
+```
+
+Adjust the path when your distribution installs Stockfish elsewhere.
 
 ## macOS
 
@@ -44,15 +61,25 @@ Install Stockfish through a trusted package manager or official release, then di
 
 ```bash
 command -v stockfish
-stockfish uci
+stockfish
 ```
 
-Pass the absolute result of `command -v stockfish` to `StockfishEngineOptions`.
+Enter `uci`, `isready`, then `quit`. Pass the absolute result of `command -v stockfish` to the consumer:
+
+```bash
+stockfish_path="$(command -v stockfish)"
+dotnet run --project samples/BasicAnalysis/BasicAnalysis.csproj -- "$stockfish_path"
+STOCKFISH_UCI_PATH="$stockfish_path" dotnet test -c Release
+```
+
+If you installed Stockfish outside your shell's PATH, use its known absolute path instead.
 
 ## Verify before using from .NET
 
 A valid UCI engine responds with identity/options followed by `uciok` after receiving `uci`, and with `readyok` after receiving `isready`. The library reports a clear startup/protocol error when either response is absent before the configured timeout.
 
 ## Version policy
+
+The sample is a separate project in the Git repository, not part of the NuGet package. The integration suite is skipped unless `STOCKFISH_UCI_PATH` names a user-supplied executable.
 
 The NuGet package version and the external Stockfish version are independent. The library records engine identity/options at startup and supports its UCI contract; the project documentation identifies versions that have been exercised by integration tests.

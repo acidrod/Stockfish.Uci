@@ -12,11 +12,33 @@ Install Stockfish yourself and pass its absolute executable path when creating t
 
 ## Status
 
-The repository contains the .NET solution and unit-test foundation. The UCI client API is not yet stable before `v0.1.0`.
+The managed .NET 10 wrapper implements engine startup, UCI option discovery, bounded analysis, MultiPV, streaming, cancellation and process cleanup. Integration tests have exercised Stockfish 18 on Linux. Windows and macOS setup is documented below; automated cross-platform compatibility testing is pending. Version 0.1.0 is under development and has not been published to NuGet.org.
 
-## Intended usage
+## Quick start
+
+1. Install Stockfish as described in [installing Stockfish](docs/installing-stockfish.md).
+2. Pass its absolute executable path to `StockfishEngineOptions`.
+3. From the repository root, run the separate, non-packable console sample.
+
+Linux or macOS (replace the path with your installed executable):
+
+```bash
+dotnet run --project samples/BasicAnalysis/BasicAnalysis.csproj -- /absolute/path/to/stockfish
+```
+
+Windows (PowerShell):
+
+```powershell
+dotnet run --project samples/BasicAnalysis/BasicAnalysis.csproj -- 'C:\Tools\Stockfish\stockfish-windows-x86-64.exe'
+```
+
+The sample prints the engine name, the best move, and its principal variations. The engine remains external to the application and package.
+
+## Library usage
 
 ```csharp
+using Stockfish.Uci;
+
 await using var engine = await StockfishEngine.StartAsync(
     new StockfishEngineOptions("/usr/bin/stockfish"));
 
@@ -25,9 +47,24 @@ var result = await engine.AnalyzeAsync(
     new AnalysisLimits { Depth = 18, MultiPv = 3 });
 
 Console.WriteLine(result.BestMove);
+foreach (var variation in result.Variations)
+{
+    Console.WriteLine($"PV {variation.Index}: {string.Join(' ', variation.Moves)}");
+}
 ```
 
-The exact API shown above becomes valid only when the v0.1 implementation and tests in this repository exist.
+Use `startpos` or `fen <six FEN fields>` with optional UCI moves, without the `position` prefix. Set a depth, move time, or both. Use `AnalyzeStreamingAsync` for live updates; pass a cancellation token to stop a search. Only one search may run on an engine instance at a time.
+
+## Build and inspect the local NuGet package
+
+From the repository root:
+
+```bash
+dotnet pack src/Stockfish.Uci/Stockfish.Uci.csproj --configuration Release --output artifacts/packages
+python3 scripts/verify-package.py --package artifacts/packages/Stockfish.Uci.0.1.0.nupkg
+```
+
+Only the library is packable. The package contains its managed assembly, README and NuGet metadata; the sample, tests and engine executables are excluded. The verifier rejects unexpected package entries.
 
 ## License and third-party notices
 
