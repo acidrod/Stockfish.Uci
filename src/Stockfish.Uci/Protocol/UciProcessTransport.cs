@@ -120,11 +120,15 @@ internal sealed class UciProcessTransport : IUciTransport
         }
     }
 
-    public ValueTask DisposeAsync()
+    public ValueTask DisposeAsync() => BeginDispose(force: false);
+
+    internal ValueTask AbortAsync() => BeginDispose(force: true);
+
+    private ValueTask BeginDispose(bool force)
     {
         lock (_disposeLock)
         {
-            return new ValueTask(_disposeTask ??= DisposeCoreAsync());
+            return new ValueTask(_disposeTask ??= DisposeCoreAsync(force));
         }
     }
 
@@ -159,11 +163,15 @@ internal sealed class UciProcessTransport : IUciTransport
         }
     }
 
-    private async Task DisposeCoreAsync()
+    private async Task DisposeCoreAsync(bool force)
     {
         try
         {
-            if (!_process.HasExited)
+            if (force)
+            {
+                await KillAndWaitAsync().ConfigureAwait(false);
+            }
+            else if (!_process.HasExited)
             {
                 using var gracefulTimeout = new CancellationTokenSource(_stopTimeout);
                 try

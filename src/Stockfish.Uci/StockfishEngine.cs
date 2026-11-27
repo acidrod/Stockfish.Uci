@@ -5,11 +5,13 @@ namespace Stockfish.Uci;
 public sealed class StockfishEngine : IAsyncDisposable
 {
     private readonly UciProcessTransport _transport;
+    private readonly UciAnalysisSession _analysis;
 
-    private StockfishEngine(UciProcessTransport transport, StockfishEngineInfo info)
+    private StockfishEngine(UciProcessTransport transport, StockfishEngineInfo info, StockfishEngineOptions options)
     {
         _transport = transport;
         Info = info;
+        _analysis = new UciAnalysisSession(transport, info, options, transport.AbortAsync);
     }
 
     public StockfishEngineInfo Info { get; }
@@ -35,7 +37,7 @@ public sealed class StockfishEngine : IAsyncDisposable
         try
         {
             var info = await new UciSession(transport).InitializeAsync(options, cancellationToken).ConfigureAwait(false);
-            return new StockfishEngine(transport, info);
+            return new StockfishEngine(transport, info, options);
         }
         catch (Exception exception)
         {
@@ -58,5 +60,17 @@ public sealed class StockfishEngine : IAsyncDisposable
         }
     }
 
-    public ValueTask DisposeAsync() => _transport.DisposeAsync();
+    /// <summary>Analyzes a position and returns the final best move and principal variations.</summary>
+    /// <remarks>Pass startpos or fen arguments without the position prefix. Only one search may be active per engine.</remarks>
+    public Task<AnalysisResult> AnalyzeAsync(
+        string position, AnalysisLimits limits, CancellationToken cancellationToken = default) =>
+        _analysis.AnalyzeAsync(position, limits, cancellationToken);
+
+    /// <summary>Streams snapshots of the latest principal variations, until bestmove or cancellation.</summary>
+    /// <remarks>Disposing the enumerator early stops the active search and waits for bestmove before reusing the engine.</remarks>
+    public IAsyncEnumerable<AnalysisUpdate> AnalyzeStreamingAsync(
+        string position, AnalysisLimits limits, CancellationToken cancellationToken = default) =>
+        _analysis.AnalyzeStreamingAsync(position, limits, cancellationToken);
+
+    public ValueTask DisposeAsync() => _analysis.DisposeAsync();
 }
