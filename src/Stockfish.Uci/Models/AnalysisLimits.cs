@@ -10,7 +10,6 @@ public sealed record AnalysisLimits
 
     public void Validate()
     {
-
         if (Depth is null && MoveTime is null)
         {
             throw new ArgumentException("At least one analysis bound must be configured.");

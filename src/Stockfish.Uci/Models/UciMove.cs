@@ -24,6 +24,6 @@ public sealed partial class UciMove
 
     public override string ToString() => Value;
 
-    [GeneratedRegex("^[a-h][1-8][a-h][1-8][qrbn]?$")]
+    [GeneratedRegex(@"\A[a-h][1-8][a-h][1-8][qrbn]?\z")]
     private static partial Regex UciMovePattern();
 }
