@@ -4,14 +4,8 @@
 
 [Stockfish](https://stockfishchess.org/) is a chess engine distributed under the GNU General Public License version 3 (GPL-3.0). Copyright belongs to the Stockfish developers; see the upstream project for its complete copyright notices.
 
-At this repository revision, **no Stockfish binary or Stockfish source code is included**.
+At this repository revision, **no Stockfish binary, Stockfish source code, or other Stockfish artifact is included or redistributed**.
 
-Before any Stockfish binary is included in a release, this file and the accompanying engine manifest must state:
+Users obtain and manage their own Stockfish installation. The package communicates with the user-supplied executable through the published UCI text protocol.
 
-- the exact upstream Stockfish release, tag, and/or commit;
-- the official source and binary download URLs;
-- the target runtime identifier and CPU variant;
-- the SHA-256 checksum of the distributed binary; and
-- how to obtain the corresponding source code under GPLv3.
-
-The project must preserve Stockfish's applicable copyright notices and GPLv3 obligations in every package that distributes a Stockfish binary.
+The project must not imply affiliation with the Stockfish project. If a future change proposes distributing an upstream binary or source artifact, it requires a separate issue, licensing review, provenance documentation, and explicit approval before implementation.
