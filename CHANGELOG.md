@@ -4,6 +4,23 @@ Changes to Stockfish.Uci are recorded here. Versions follow [Semantic Versioning
 
 ## [Unreleased]
 
+## [0.1.1]
+
+### Added
+
+- Original chess-analysis package icon embedded in the NuGet package.
+- Compatibility policy with release-specific managed CI and real-engine integration evidence.
+
+### Changed
+
+- Package verification now requires the exact icon file and validates its metadata, PNG dimensions and size without relaxing native-binary restrictions.
+- Updated installation documentation and added a clean public-feed consumer verification procedure for published versions.
+
+### Compatibility
+
+- No public API or engine behavior changes; the target remains .NET 10 and the engine remains externally installed.
+- Consult the release validation links for the configurations verified for this version.
+
 ## [0.1.0]
 
 ### Added

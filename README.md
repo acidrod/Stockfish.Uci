@@ -7,7 +7,7 @@
 
 A strongly typed .NET client for Universal Chess Interface (UCI) engines, designed for analysis with a user-installed Stockfish executable.
 
-[Releases](https://github.com/acidrod/Stockfish.Uci/releases) · [Changelog](https://github.com/acidrod/Stockfish.Uci/blob/main/CHANGELOG.md) · [Issues](https://github.com/acidrod/Stockfish.Uci/issues)
+[NuGet](https://www.nuget.org/packages/Stockfish.Uci) · [Releases](https://github.com/acidrod/Stockfish.Uci/releases) · [Changelog](https://github.com/acidrod/Stockfish.Uci/blob/main/CHANGELOG.md) · [Issues](https://github.com/acidrod/Stockfish.Uci/issues)
 
 ## Features
 
@@ -26,17 +26,17 @@ The NuGet package contains **managed .NET code only**. It does not download, bun
 - .NET 10.
 - A separately installed Stockfish executable appropriate for your operating system and CPU.
 
-Follow the [Stockfish installation guide](https://github.com/acidrod/Stockfish.Uci/blob/main/docs/installing-stockfish.md) to locate and verify your engine.
+Follow the [Stockfish installation guide](https://github.com/acidrod/Stockfish.Uci/blob/main/docs/installing-stockfish.md) to locate and verify your engine. Consult the [compatibility policy](https://github.com/acidrod/Stockfish.Uci/blob/main/docs/compatibility.md) for tested configurations.
 
 ### Install the library
 
-Once the first version is published, install the released package from NuGet.org:
+Install the latest listed stable version from NuGet.org:
 
 ```bash
-dotnet add package Stockfish.Uci --version 0.1.0
+dotnet add package Stockfish.Uci
 ```
 
-Check [NuGet.org](https://www.nuget.org/packages/Stockfish.Uci) and [GitHub Releases](https://github.com/acidrod/Stockfish.Uci/releases) for available versions. For development before publication, build the library from source or use the local package instructions below.
+Check [NuGet.org](https://www.nuget.org/packages/Stockfish.Uci) and [GitHub Releases](https://github.com/acidrod/Stockfish.Uci/releases) for available versions. Use `--version` to select a specific published version. For unpublished changes, build the library from source or use the local package instructions below.
 
 ### Analyze a position
 
@@ -84,7 +84,7 @@ The sample prints the engine name, best move and principal variations.
 | [Managed CI](https://github.com/acidrod/Stockfish.Uci/actions/workflows/ci.yml) | Unit tests once on Linux; then build, formatting and package validation on Windows, Linux and macOS | PRs and pushes to `main` |
 | [Stockfish integration](https://github.com/acidrod/Stockfish.Uci/actions/workflows/integration.yml) | Real-engine tests using official, checksum-verified Stockfish 18 assets on Windows, Linux and macOS | Manual and weekly |
 
-Unit tests require no installed engine. Real-engine integration tests have passed locally with Stockfish 18 on Linux; consult the workflow results for evidence on each other platform and the release notes for the runs associated with each released commit. CI downloads an engine only into temporary integration-runner directories and does not publish it as an artifact.
+Unit tests require no installed engine. Stockfish 18 integration tests passed on Linux x64, Windows x64 and macOS ARM64 for v0.1.0. See the [compatibility policy](https://github.com/acidrod/Stockfish.Uci/blob/main/docs/compatibility.md#recorded-release-evidence) and each release’s validation links; evidence from one release does not certify later releases or other configurations. CI downloads an engine only into temporary integration-runner directories and does not publish it as an artifact.
 
 The unit-test job and each integration job include a GitHub Actions summary with pass/fail/skip counts, duration and expandable individual results.
 
@@ -92,14 +92,15 @@ The unit-test job and each integration job include a GitHub Actions summary with
 
 ```bash
 dotnet pack src/Stockfish.Uci/Stockfish.Uci.csproj --configuration Release --output artifacts/packages
-python3 scripts/verify-package.py --package artifacts/packages/Stockfish.Uci.0.1.0.nupkg
+python3 scripts/verify-package.py --package artifacts/packages/Stockfish.Uci.0.1.1.nupkg
 ```
 
-Only the library is packable. The package contains its managed assembly, README and NuGet metadata; samples, tests and engine executables are excluded. The verifier rejects unexpected package entries. Use the version specified by the library project when naming the package.
+Only the library is packable. The package contains its managed assembly, README, original package icon (from v0.1.1) and NuGet metadata; samples, tests and engine executables are excluded. The verifier checks the exact package icon and rejects unexpected package entries, including native binaries. Use the version specified by the library project when naming the package.
 
 ## Documentation
 
 - [Installing Stockfish](https://github.com/acidrod/Stockfish.Uci/blob/main/docs/installing-stockfish.md)
+- [Compatibility policy](https://github.com/acidrod/Stockfish.Uci/blob/main/docs/compatibility.md)
 - [Contributing and local validation](https://github.com/acidrod/Stockfish.Uci/blob/main/CONTRIBUTING.md)
 - [Release procedure](https://github.com/acidrod/Stockfish.Uci/blob/main/docs/releasing.md)
 - [Security policy](https://github.com/acidrod/Stockfish.Uci/blob/main/SECURITY.md)

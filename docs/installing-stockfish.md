@@ -9,6 +9,8 @@ Use the official Stockfish download page or your operating system's trusted pack
 - Official releases: <https://stockfishchess.org/download/>
 - Source and release history: <https://github.com/official-stockfish/Stockfish>
 
+The library does not search PATH or install engines; PATH lookup in this guide is only a way to find the executable you will pass explicitly.
+
 The exact package-manager version varies by operating system and repository. The commands below verify the executable actually selected; they are more important than assuming a package name implies a particular Stockfish version.
 
 ## Windows
@@ -76,10 +78,10 @@ If you installed Stockfish outside your shell's PATH, use its known absolute pat
 
 ## Verify before using from .NET
 
-A valid UCI engine responds with identity/options followed by `uciok` after receiving `uci`, and with `readyok` after receiving `isready`. The library reports a clear startup/protocol error when either response is absent before the configured timeout.
+A valid UCI engine responds with identity/options followed by `uciok` after receiving `uci`, and with `readyok` after receiving `isready`. Check the reported `id name` as well (for the tested release of Stockfish, `id name Stockfish 18`). The library reports a clear startup/protocol error when either response is absent before the configured timeout.
 
 ## Version policy
 
 The sample is a separate project in the Git repository, not part of the NuGet package. The integration tests require `STOCKFISH_UCI_PATH` to name a user-supplied executable; they are skipped when the variable is unset. See the [integration workflow](https://github.com/acidrod/Stockfish.Uci/actions/workflows/integration.yml) for recorded platform results.
 
-The NuGet package version and the external Stockfish version are independent. The library records engine identity/options at startup and supports its UCI contract; the project documentation identifies versions that have been exercised by integration tests.
+The NuGet package version and the external Stockfish version are independent. The library records engine identity/options at startup and supports its UCI contract; the [compatibility policy](compatibility.md) identifies engine versions and platform configurations exercised by release integration tests. A newer or older engine may work, but a successful handshake alone does not establish tested compatibility.
